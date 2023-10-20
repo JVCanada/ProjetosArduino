@@ -1,0 +1,5 @@
+Informações sobre problema de conexão do Arduino:
+https://www.robocore.net/tutoriais/envie-dados-para-os-pinos-virtuais-do-blynk.html
+https://docs.blynk.io/en/blynk-library-firmware-api/blynk-timer
+https://community.blynk.cc/t/button-does-not-work-with-sensors/20358/19
+https://community.blynk.cc/t/blynk-loses-connection-after-a-few-hours-need-to-restart-arduino/53605/4
