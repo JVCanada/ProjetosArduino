@@ -2,8 +2,8 @@
 /* 
   Projeto: Protótipo de Troca Parcial Automática de um aquário marinho
   Programador: Joao Victor Canada, Eduardo Mendes e Ricardo de Almeida
-  Data: 19/10/2023
-  Versão: 1.0
+  Data: 24/10/2023
+  Versão: 1.4
 */
 
 // Bibliotecas do sensor de Temperatura e do Display
@@ -13,6 +13,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <SimpleTimer.h>
+#include <LiquidCrystal_I2C.h>
 
 
 
@@ -30,6 +31,7 @@
 
 #include "ESP8266_Lib.h"
 #include "BlynkSimpleShieldEsp8266.h"
+
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
@@ -49,31 +51,32 @@ SoftwareSerial EspSerial(10,11); // RX, TX
 
 // Your ESP8266 baud rate:
 #define ESP8266_BAUD 9600
+//#define ESP8266_BAUD 115200
 
 ESP8266 wifi(&EspSerial);
 
  
-
-
+// Definicao Timer:
+SimpleTimer timer;
 
 
 
 
 
 // DEFINIÇÕES E DECLARAÇÕES DO DISPLAY 
+#define endereco  0x27 // Endereços comuns: 0x27, 0x3F
+#define colunas   16
+#define linhas    2
 
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
- 
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+// INSTANCIANDO OBJETOS
+LiquidCrystal_I2C lcd(endereco, colunas, linhas);
+
 
 
 
 
 // DEFINIÇÕES E DECLARAÇÕES DO SENSOR DE PH
-SimpleTimer timer;
+
 float calibration_value = 21.34; //21.34, 24.34, 21.34 - 0.7
 int phval = 0; 
 unsigned long int avgval; 
@@ -110,12 +113,10 @@ DallasTemperature dallasTemperature(&oneWire);
 
 
 // DEFINIÇÕES E DECLARAÇÕES DOS CÓDIGOS DAS BOMBAS E RELÉS 
-// #define bombaDescarte (ou relé)
-// #define bombaGalao (ou relé)
-// #define bombaReposicao (ou relé)
-// #define bombaCirculacao (ou relé)
 
 int rele1 = 13;
+int rele2 = 9;
+int rele3 = 7;
 
 
 // FUNÇÕES DOS PINOS VIRTUAIS (PARA AS BOMBAS)
@@ -123,24 +124,39 @@ BLYNK_WRITE(V0){
   int valorPin = param.asInt();
   if(valorPin == 1) {
     digitalWrite (rele1, HIGH); 
-    Serial.print("Entrou em 1!");
+    //Serial.print("V0: Entrou em 1!");
   } else {
     digitalWrite (rele1, LOW);
-    Serial.print("Entrou em 0!");
+    //Serial.print("V0: Entrou em 0!");
   }
 }
 
+
 BLYNK_WRITE(V1){
-
+  int valorPin2 = param.asInt();
+  if(valorPin2 == 1) {
+    digitalWrite (rele2, HIGH); 
+    //Serial.print("V1: Entrou em 1!");
+  } else {
+    digitalWrite (rele2, LOW);
+    //Serial.print("V1: Entrou em 0!");
+  }
 }
 
+/*
 BLYNK_WRITE(V2){
-
+  int valorPin3 = param.asInt();
+  if(valorPin3 == 1) {
+    digitalWrite (rele3, HIGH); 
+    Serial.print("V2: Entrou em 1!");
+  } else {
+    digitalWrite (rele3, LOW);
+    Serial.print("V2: Entrou em 0!");
+  }
 }
+*/
 
-BLYNK_WRITE(V3){
 
-}
 
 
 
@@ -151,8 +167,17 @@ void setup() {
   pinMode(rele1, OUTPUT);
   //digitalWrite (rele1, LOW);
 
+  // PinMode do Rele2
+  pinMode(rele2, OUTPUT);
+  //digitalWrite (rele1, LOW);
+
+  // PinMode do Rele2
+  //pinMode(rele3, OUTPUT);
+  //digitalWrite (rele1, LOW);
+
   // Debug console
 	Serial.begin(9600);
+  //Serial.begin(115200);
 
   // Set ESP8266 baud rate
 	EspSerial.begin(ESP8266_BAUD);
@@ -165,11 +190,10 @@ void setup() {
 
   // Inicio Wire:
   Wire.begin();
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  display.clearDisplay();
-  display.setTextColor(WHITE);
-
-  timer.setInterval(500L, display_pHValue);
+  
+  // timer ph (para leitura)
+  timer.setInterval(60000L, leituraPh);
+  timer.setInterval(60000L, leituraTDS);
 
 }
 
@@ -178,9 +202,10 @@ void loop() {
   // Roda o Blynk:
   Blynk.run();
 
-  leituraPh();
+  // rodando o timer
+  timer.run();
 
-  //leituraTDS();
+
 
 }
 
@@ -211,54 +236,28 @@ float leituraPh() {
  avgval+=buffer_arr[i];
  float volt=(float)avgval*5.0/1024/6; 
   ph_act = -5.70 * volt + calibration_value;
-
- //Serial.println("pH Val: ");
- //Serial.print(ph_act);
+ double phV3 = (float)ph_act;
+ //Serial.print(phV3);
  //delay(1000);
+ Blynk.virtualWrite(V3, phV3);
   
   
-}
-
-void display_pHValue()
-{
-     // display on Oled display
-
-   // Oled display
-  display.clearDisplay();
-  display.setTextSize(2);
-  display.setCursor(0,0); // column row
-  display.print("pH:");
-
-  display.setTextSize(2);
-  display.setCursor(55, 0);
-  display.print(ph_act);
-
-/*
-    display.setTextSize(2);
-  display.setCursor(0,30);
-  display.print("EC:");
-
-  display.setTextSize(2);
-  display.setCursor(60, 30);
-  display.print(345);
-  display.setCursor(95, 50);
-*/
- display.display();
 }
 
 
 float leituraTDS() {
 
-  /* 
+   
   dallasTemperature.requestTemperatures();
   sensor::waterTemp = dallasTemperature.getTempCByIndex(0);
   float rawEc = analogRead(pin::tds_sensor) * device::aref / 1024.0; // read the analog value more stable by the median filtering algorithm, and convert to voltage value
   float temperatureCoefficient = 1.0 + 0.02 * (sensor::waterTemp - 25.0); // temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
   sensor::ec = (rawEc / temperatureCoefficient) * sensor::ecCalibration; // temperature and calibration compensation
   sensor::tds = (133.42 * pow(sensor::ec, 3) - 255.86 * sensor::ec * sensor::ec + 857.39 * sensor::ec) * 0.5; //convert voltage value to tds value
-  Serial.print(F("TDS:")); Serial.println(sensor::tds);
-  Serial.print(F("EC:")); Serial.println(sensor::ec, 2);
-  Serial.print(F("Temperature:")); Serial.println(sensor::waterTemp,2);
+  Blynk.virtualWrite(V4, sensor::tds);
+  //Serial.print(F("TDS:")); Serial.println(sensor::tds);
+  //Serial.print(F("EC:")); Serial.println(sensor::ec, 2);
+  //Serial.print(F("Temperature:")); Serial.println(sensor::waterTemp,2);
   //lcd.clear();
   //lcd.print("TDS   EC   Temp");
   //lcd.setCursor(0,1); 
@@ -267,7 +266,7 @@ float leituraTDS() {
   //lcd.print(sensor::ec, 2); 
   //lcd.setCursor(11,1); 
   //lcd.print(sensor::waterTemp,2); 
-  */
+  
 
 }
 
