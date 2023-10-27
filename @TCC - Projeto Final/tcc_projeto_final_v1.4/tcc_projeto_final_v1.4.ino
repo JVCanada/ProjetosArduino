@@ -239,9 +239,10 @@ float leituraPh() {
  float volt=(float)avgval*5.0/1024/6; 
   ph_act = -5.70 * volt + calibration_value;
  double phV3 = (float)ph_act;
+ Serial.print(phV3);
  //Serial.print(phV3);
  //delay(1000);
- Blynk.virtualWrite(V3, phV3);
+ //Blynk.virtualWrite(V3, phV3);
   
   
 }
@@ -256,18 +257,12 @@ float leituraTDS() {
   float temperatureCoefficient = 1.0 + 0.02 * (sensor::waterTemp - 25.0); // temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
   sensor::ec = (rawEc / temperatureCoefficient) * sensor::ecCalibration; // temperature and calibration compensation
   sensor::tds = (133.42 * pow(sensor::ec, 3) - 255.86 * sensor::ec * sensor::ec + 857.39 * sensor::ec) * 0.5; //convert voltage value to tds value
-  Blynk.virtualWrite(V4, sensor::tds);
+  Serial.print(F("TDS:"+sensor::tds));
+  //Blynk.virtualWrite(V4, sensor::tds);
   //Serial.print(F("TDS:")); Serial.println(sensor::tds);
   //Serial.print(F("EC:")); Serial.println(sensor::ec, 2);
   //Serial.print(F("Temperature:")); Serial.println(sensor::waterTemp,2);
-  //lcd.clear();
-  //lcd.print("TDS   EC   Temp");
-  //lcd.setCursor(0,1); 
-  //lcd.print(sensor::tds); 
-  //lcd.setCursor(5,1); 
-  //lcd.print(sensor::ec, 2); 
-  //lcd.setCursor(11,1); 
-  //lcd.print(sensor::waterTemp,2); 
+
   
 
 }
